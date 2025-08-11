@@ -40,19 +40,18 @@ impl AuthManager {
     }
 
     pub async fn detect_auth(&self, provider: &str) -> Result<AuthMethod> {
-        // 1. Check for API key in manager
-        if let Some(api_key) = self.api_keys.get(provider) {
-            return Ok(AuthMethod::ApiKey { key: api_key.clone() });
-        }
-
-        // 2. Check native CLI session
+        // 1. Prefer existing CLI/session credentials
         if self.check_cli_session(provider).await? {
             return Ok(AuthMethod::CliAuth);
         }
 
-        // 3. Check environment variables
-        let env_var_name = format!("{}_API_KEY", provider.to_uppercase());
-        if let Ok(key) = env::var(&env_var_name) {
+        // 2. Manager-provided API key (programmatic)
+        if let Some(api_key) = self.api_keys.get(provider) {
+            return Ok(AuthMethod::ApiKey { key: api_key.clone() });
+        }
+
+        // 3. Environment variables (provider-specific aliases first)
+        if let Some(key) = self.get_env_api_key(provider) {
             return Ok(AuthMethod::ApiKey { key });
         }
 
@@ -61,21 +60,60 @@ impl AuthManager {
     }
 
     async fn check_cli_session(&self, provider: &str) -> Result<bool> {
-        let config_path = self.get_provider_config_path(provider)?;
-        Ok(config_path.exists())
+        let candidates = self.get_cli_session_candidates(provider)?;
+        Ok(candidates.into_iter().any(|p| p.exists()))
     }
 
-    fn get_provider_config_path(&self, provider: &str) -> Result<PathBuf> {
+    fn get_cli_session_candidates(&self, provider: &str) -> Result<Vec<PathBuf>> {
+        let mut paths = Vec::new();
         let home = dirs::home_dir()
             .ok_or_else(|| anyhow!("Could not determine home directory"))?;
-        
-        let config_path = match provider {
-            "claude" => home.join(".claude").join("config.json"),
-            "gemini" => home.join(".gemini").join("config.json"),
-            "codex" => home.join(".codex").join("config.json"),
+
+        match provider {
+            // Known places where editors may store Claude session/state.
+            // We only check for existence; we do NOT parse secrets here.
+            "claude" => {
+                // VS Code (macOS)
+                paths.push(home.join("Library/Application Support/Code/User/globalStorage/anthropic.claude-copilot"));
+                // VS Code (Linux)
+                paths.push(home.join(".config/Code/User/globalStorage/anthropic.claude-copilot"));
+                // VS Code (Windows)
+                if let Ok(appdata) = env::var("APPDATA") {
+                    paths.push(PathBuf::from(appdata).join("Code/User/globalStorage/anthropic.claude-copilot"));
+                }
+                // Legacy/placeholder path (backward compatibility)
+                paths.push(home.join(".claude/config.json"));
+            }
+            // For Gemini, prefer gcloud ADC as a sign-in indicator
+            "gemini" => {
+                paths.push(home.join(".config/gcloud/application_default_credentials.json"));
+                if let Ok(appdata) = env::var("APPDATA") {
+                    paths.push(PathBuf::from(appdata).join("gcloud/application_default_credentials.json"));
+                }
+                paths.push(home.join(".gemini/config.json"));
+            }
+            // Unknown tooling; keep legacy path as a marker
+            "codex" => {
+                paths.push(home.join(".codex/config.json"));
+            }
             _ => return Err(anyhow!("Unknown provider: {}", provider)),
-        };
-        
-        Ok(config_path)
+        }
+
+        Ok(paths)
+    }
+
+    fn get_env_api_key(&self, provider: &str) -> Option<String> {
+        match provider {
+            "claude" => {
+                env::var("ANTHROPIC_API_KEY").ok()
+                    .or_else(|| env::var("CLAUDE_API_KEY").ok())
+            }
+            "gemini" => {
+                env::var("GEMINI_API_KEY").ok()
+                    .or_else(|| env::var("GOOGLE_API_KEY").ok())
+            }
+            "codex" => env::var("CODEX_API_KEY").ok(),
+            other => env::var(format!("{}_API_KEY", other.to_uppercase())).ok(),
+        }
     }
 }
