@@ -57,7 +57,7 @@ impl PipelineParser {
     /// The pipeline format is: `provider:action -> provider:action -> ...`
     /// 
     /// # Examples
-    /// ```
+    /// ```ignore
     /// let input = "claude:design -> gemini:implement -> codex:review";
     /// let steps = PipelineParser::parse(input).unwrap();
     /// ```

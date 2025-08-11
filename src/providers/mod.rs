@@ -1,4 +1,6 @@
 pub mod claude;
+pub mod gemini;
+pub mod codex;
 
 use async_trait::async_trait;
 use std::collections::HashMap;
@@ -31,7 +33,7 @@ impl Response {
 }
 
 /// Context for AI provider requests with enhanced capabilities
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Context {
     pub conversation_history: Vec<Message>,
     pub current_files: Vec<PathBuf>,
@@ -40,9 +42,9 @@ pub struct Context {
     pub file_contents: HashMap<PathBuf, String>,
     #[serde(skip)]
     pub scopes: Vec<String>,
-    #[serde(skip)]
+    #[serde(skip, default = "current_time")]
     pub created_at: std::time::SystemTime,
-    #[serde(skip)]
+    #[serde(skip, default = "current_time")]
     pub last_updated: std::time::SystemTime,
 }
 
@@ -330,6 +332,14 @@ impl Context {
             self.metadata.insert(key, value);
         }
     }
+}
+
+impl Default for Context {
+    fn default() -> Self { Self::new() }
+}
+
+fn current_time() -> std::time::SystemTime {
+    std::time::SystemTime::now()
 }
 
 /// Context diff for tracking changes

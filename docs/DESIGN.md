@@ -3,11 +3,11 @@
 ## Implementation Status
 
 - [x] CLIインターフェース（clapパーサ）実装済み（`src/cli/mod.rs`）
-- [ ] コマンド実行との統合（`main.rs`でのディスパッチ）未実装（現状は `println!("Hello, world!")` のみ）
+- [x] コマンド実行との統合（`main.rs`でのディスパッチ）実装済み
 - [x] Providerトレイト実装済み（`providers::AIProvider`）
 - [x] プロバイダ: Claude 実装済み（`providers/claude.rs`）
-- [ ] プロバイダ: Gemini 未実装
-- [ ] プロバイダ: Codex 未実装
+- [x] プロバイダ: Gemini 実装済み（スタブ）
+- [x] プロバイダ: Codex 実装済み（スタブ）
 - [x] パイプラインDSLパーサ（`provider:action -> ...`）実装済み（`pipeline::PipelineParser`）
 - [x] パイプライン実行エンジン（リトライ/エラー継続）実装済み（`pipeline::PipelineExecutor`）
 - [ ] ステップ間Transform 未実装
