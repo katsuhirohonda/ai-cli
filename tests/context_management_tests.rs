@@ -1,6 +1,5 @@
 use ai_cli::providers::{Context, Message, MessageRole, Response};
 use std::path::PathBuf;
-use std::collections::HashMap;
 use serde_json::json;
 
 #[tokio::test]

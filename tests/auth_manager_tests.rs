@@ -1,4 +1,4 @@
-use ai_cli::auth::{AuthManager, AuthMethod, ProviderAuth};
+use ai_cli::auth::{AuthManager, AuthMethod};
 
 #[tokio::test]
 async fn test_auth_manager_detect_cli_session() {

@@ -16,7 +16,7 @@ async fn main() {
     let _verbose = args.verbose;
 
     // Auth manager and executor
-    let mut auth = AuthManager::new();
+    let auth = AuthManager::new();
     let mut executor = PipelineExecutor::new();
 
     // Register providers opportunistically via detected auth
@@ -87,7 +87,7 @@ async fn main() {
         Some(Command::Version) => {
             println!("ai-cli version {}", env!("CARGO_PKG_VERSION"));
         }
-        Some(Command::Execute { provider, prompt, api_key, context, no_stream }) => {
+        Some(Command::Execute { provider, prompt, api_key, context, no_stream: _ }) => {
             // Ensure provider is registered; for now support only claude natively
             if !executor.has_provider(&provider) {
                 if let Some(key) = api_key.clone() {
