@@ -35,6 +35,11 @@ impl ClaudeProvider {
         }
     }
 
+    /// Create a provider assuming a detected CLI/session exists
+    pub fn from_detected_cli_session() -> Self {
+        Self { api_key: None, is_cli_session: true }
+    }
+
     /// Get the path to Claude CLI configuration
     fn get_claude_config_path() -> Result<PathBuf> {
         let home = dirs::home_dir()

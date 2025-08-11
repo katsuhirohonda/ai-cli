@@ -81,6 +81,12 @@ impl AuthManager {
                 if let Ok(appdata) = env::var("APPDATA") {
                     paths.push(PathBuf::from(appdata).join("Code/User/globalStorage/anthropic.claude-copilot"));
                 }
+                // Claude Desktop app (macOS/Linux/Windows)
+                paths.push(home.join("Library/Application Support/Claude"));
+                paths.push(home.join(".config/Claude"));
+                if let Ok(appdata) = env::var("APPDATA") {
+                    paths.push(PathBuf::from(appdata).join("Claude"));
+                }
                 // Legacy/placeholder path (backward compatibility)
                 paths.push(home.join(".claude/config.json"));
             }

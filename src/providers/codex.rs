@@ -23,6 +23,11 @@ impl CodexProvider {
         }
     }
 
+    /// Create a provider assuming a detected CLI/session exists
+    pub fn from_detected_cli_session() -> Self {
+        Self { api_key: None, is_cli_session: true }
+    }
+
     fn get_config_path() -> Result<PathBuf> {
         let home = dirs::home_dir().ok_or_else(|| anyhow!("Could not determine home directory"))?;
         Ok(home.join(".codex").join("config.json"))
@@ -55,4 +60,3 @@ impl AIProvider for CodexProvider {
 
     fn name(&self) -> &str { "codex" }
 }
-

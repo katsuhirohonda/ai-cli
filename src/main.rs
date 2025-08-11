@@ -28,9 +28,9 @@ async fn main() {
                 executor.register_provider("claude", Arc::new(prov));
             }
             ai_cli::auth::AuthMethod::CliAuth => {
-                if let Ok(prov) = ClaudeProvider::from_cli_session().await {
-                    executor.register_provider("claude", Arc::new(prov));
-                }
+                // Assume detected session is usable and register provider
+                let prov = ClaudeProvider::from_detected_cli_session();
+                executor.register_provider("claude", Arc::new(prov));
             }
             _ => {}
         }
@@ -43,9 +43,8 @@ async fn main() {
                 executor.register_provider("gemini", Arc::new(prov));
             }
             ai_cli::auth::AuthMethod::CliAuth => {
-                if let Ok(prov) = GeminiProvider::from_cli_session().await {
-                    executor.register_provider("gemini", Arc::new(prov));
-                }
+                let prov = GeminiProvider::from_detected_cli_session();
+                executor.register_provider("gemini", Arc::new(prov));
             }
             _ => {}
         }
@@ -58,9 +57,8 @@ async fn main() {
                 executor.register_provider("codex", Arc::new(prov));
             }
             ai_cli::auth::AuthMethod::CliAuth => {
-                if let Ok(prov) = CodexProvider::from_cli_session().await {
-                    executor.register_provider("codex", Arc::new(prov));
-                }
+                let prov = CodexProvider::from_detected_cli_session();
+                executor.register_provider("codex", Arc::new(prov));
             }
             _ => {}
         }
