@@ -10,7 +10,7 @@
 - [x] プロバイダ: Codex 実装済み（スタブ）
 - [x] パイプラインDSLパーサ（`provider:action -> ...`）実装済み（`pipeline::PipelineParser`）
 - [x] パイプライン実行エンジン（リトライ/エラー継続）実装済み（`pipeline::PipelineExecutor`）
-- [ ] ステップ間Transform 未実装
+- [x] ステップ間Transform 実装済み（`PipelineStep::transform`）
 - [x] プロバイダ検証ユーティリティ（`validate_providers`）実装済み（未連携）
 - [x] ストリーミング経路（簡易：`execute_streaming` は `execute` を委譲）実装済み
 - [x] コンテキスト管理（履歴/ファイル/環境/メタ）実装済み（`providers::Context`）
@@ -270,20 +270,20 @@ User Input → Pipeline Parser → Step 1 → Transform → Step 2 → ... → A
 
 ### Phase 1: Foundation
 - [x] Rustプロジェクト初期化
-- [ ] Provider trait定義
-- [ ] 基本的なCLIパーサー
+- [x] Provider trait定義（`providers::AIProvider`）
+- [x] 基本的なCLIパーサー（`src/cli/mod.rs`）
 
 ### Phase 2: Provider Integration
-- [ ] Claude Code adapter
-- [ ] Gemini CLI adapter
-- [ ] Codex CLI adapter
-- [ ] Authentication manager
+- [x] Claude Code adapter（`providers/claude.rs`）
+- [x] Gemini CLI adapter（スタブ実装）
+- [x] Codex CLI adapter（スタブ実装）
+- [x] Authentication manager（`auth/mod.rs`）
 
 ### Phase 3: Pipeline Engine
-- [ ] Pipeline DSL parser
-- [ ] Pipeline execution engine
-- [ ] Context management
-- [ ] Transform functions
+- [x] Pipeline DSL parser（`pipeline::PipelineParser`）
+- [x] Pipeline execution engine（`pipeline::PipelineExecutor`）
+- [x] Context management（`providers::Context`）
+- [x] Transform functions（`PipelineStep::transform`）
 
 ### Phase 4: Advanced Features
 - [ ] Parallel execution
