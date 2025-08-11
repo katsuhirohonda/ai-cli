@@ -6,12 +6,19 @@ use std::sync::Arc;
 use crate::providers::{AIProvider, Response, Context, Message, MessageRole};
 use crate::auth::AuthManager;
 
+pub mod transform;
+pub use transform::{
+    Transform, TransformError, IdentityTransform, JsonExtractorTransform, 
+    SummarizerTransform, FallbackBehavior, JsonExtractorConfig
+};
+
 /// Represents a single step in the pipeline
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone)]
 pub struct PipelineStep {
     pub provider: String,
     pub action: String,
     context: Option<String>,
+    transform: Option<Arc<dyn Transform>>,
 }
 
 impl PipelineStep {
@@ -21,6 +28,7 @@ impl PipelineStep {
             provider: provider.into(),
             action: action.into(),
             context: None,
+            transform: None,
         }
     }
     
@@ -38,6 +46,47 @@ impl PipelineStep {
     pub fn with_context(mut self, context: impl Into<String>) -> Self {
         self.set_context(context);
         self
+    }
+    
+    /// Set transform for this step
+    pub fn set_transform(&mut self, transform: Arc<dyn Transform>) {
+        self.transform = Some(transform);
+    }
+    
+    /// Create a step with transform
+    pub fn with_transform(mut self, transform: Arc<dyn Transform>) -> Self {
+        self.set_transform(transform);
+        self
+    }
+    
+    /// Check if this step has a transform
+    pub fn has_transform(&self) -> bool {
+        self.transform.is_some()
+    }
+    
+    /// Get the transform for this step
+    pub fn get_transform(&self) -> Option<Arc<dyn Transform>> {
+        self.transform.clone()
+    }
+}
+
+impl fmt::Debug for PipelineStep {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("PipelineStep")
+            .field("provider", &self.provider)
+            .field("action", &self.action)
+            .field("context", &self.context)
+            .field("has_transform", &self.has_transform())
+            .finish()
+    }
+}
+
+impl PartialEq for PipelineStep {
+    fn eq(&self, other: &Self) -> bool {
+        self.provider == other.provider 
+            && self.action == other.action 
+            && self.context == other.context
+            && self.has_transform() == other.has_transform()
     }
 }
 
@@ -343,6 +392,23 @@ impl PipelineExecutor {
                     // Enhance response with metadata
                     self.enhance_response(&mut response, context, step_index, retries);
                     
+                    // Apply transform if present
+                    if let Some(transform) = step.get_transform() {
+                        match transform.transform(response).await {
+                            Ok(transformed) => {
+                                response = transformed;
+                            }
+                            Err(e) => {
+                                return StepResult {
+                                    step: step.clone(),
+                                    response: Err(anyhow!("Transform failed: {}", e)),
+                                    execution_time_ms: start_time.elapsed().as_millis() as u64,
+                                    retries,
+                                };
+                            }
+                        }
+                    }
+                    
                     // Add provider name to response content for compatibility with existing tests
                     response.content = format!("{} response: {}", step.provider, response.content);
                     
@@ -446,6 +512,7 @@ impl Default for PipelineExecutor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use async_trait::async_trait;
     
     #[test]
     fn test_pipeline_builder() {
@@ -469,5 +536,87 @@ mod tests {
         
         let formatted = PipelineParser::format(&steps);
         assert_eq!(formatted, "claude:design -> gemini:implement");
+    }
+    
+    // Test for transform functionality - will fail initially (TDD Red phase)
+    #[test]
+    fn test_pipeline_step_with_transform() {
+        let step = PipelineStep::new("claude", "design")
+            .with_transform(Arc::new(IdentityTransform));
+        
+        assert!(step.has_transform());
+        assert_eq!(step.provider, "claude");
+        assert_eq!(step.action, "design");
+    }
+    
+    // Mock provider for testing
+    struct MockProvider {
+        name: String,
+        response_content: String,
+    }
+    
+    #[async_trait]
+    impl AIProvider for MockProvider {
+        async fn execute(&self, _prompt: &str, _context: &Context) -> Result<Response> {
+            Ok(Response::new(self.response_content.clone()))
+        }
+        
+        async fn stream(&self, _prompt: &str, _context: &Context) -> Result<crate::providers::ResponseStream> {
+            unimplemented!()
+        }
+        
+        fn capabilities(&self) -> crate::providers::Capabilities {
+            crate::providers::Capabilities::default()
+        }
+        
+        fn name(&self) -> &str {
+            &self.name
+        }
+    }
+    
+    // Mock transform for testing
+    struct UppercaseTransform;
+    
+    #[async_trait]
+    impl Transform for UppercaseTransform {
+        async fn transform(&self, mut response: Response) -> Result<Response> {
+            response.content = response.content.to_uppercase();
+            Ok(response)
+        }
+        
+        fn name(&self) -> &str {
+            "uppercase"
+        }
+    }
+    
+    #[tokio::test]
+    async fn test_pipeline_with_transform() {
+        let mut executor = PipelineExecutor::new();
+        
+        // Register mock providers
+        executor.register_provider("provider1", Arc::new(MockProvider {
+            name: "provider1".to_string(),
+            response_content: "hello world".to_string(),
+        }));
+        
+        executor.register_provider("provider2", Arc::new(MockProvider {
+            name: "provider2".to_string(),
+            response_content: "goodbye".to_string(),
+        }));
+        
+        // Create pipeline with transform
+        let steps = vec![
+            PipelineStep::new("provider1", "action1")
+                .with_transform(Arc::new(UppercaseTransform)),
+            PipelineStep::new("provider2", "action2"),
+        ];
+        
+        let context = Context::new();
+        let results = executor.execute(&steps, context).await.unwrap();
+        
+        // The first step's response should be transformed to uppercase
+        // This test will fail initially as transform is not yet implemented
+        assert_eq!(results[0].content, "provider1 response: HELLO WORLD");
+        assert_eq!(results[1].content, "provider2 response: goodbye");
     }
 }
