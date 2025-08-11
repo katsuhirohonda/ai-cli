@@ -1,5 +1,32 @@
 # AI CLI Aggregator Design Document
 
+## Implementation Status
+
+- [x] CLIインターフェース（clapパーサ）実装済み（`src/cli/mod.rs`）
+- [ ] コマンド実行との統合（`main.rs`でのディスパッチ）未実装（現状は `println!("Hello, world!")` のみ）
+- [x] Providerトレイト実装済み（`providers::AIProvider`）
+- [x] プロバイダ: Claude 実装済み（`providers/claude.rs`）
+- [ ] プロバイダ: Gemini 未実装
+- [ ] プロバイダ: Codex 未実装
+- [x] パイプラインDSLパーサ（`provider:action -> ...`）実装済み（`pipeline::PipelineParser`）
+- [x] パイプライン実行エンジン（リトライ/エラー継続）実装済み（`pipeline::PipelineExecutor`）
+- [ ] ステップ間Transform 未実装
+- [x] プロバイダ検証ユーティリティ（`validate_providers`）実装済み（未連携）
+- [x] ストリーミング経路（簡易：`execute_streaming` は `execute` を委譲）実装済み
+- [x] コンテキスト管理（履歴/ファイル/環境/メタ）実装済み（`providers::Context`）
+- [x] 認証方式の型（ApiKey/Account/Cli/Browser）実装済み（`auth::AuthMethod`）
+- [x] 認証検出：APIキー/CLIセッション検出 実装済み（一部：CLIは設定ファイル存在チェックのみ）
+- [ ] 既存CLIの資格情報読み取り・設定ファイル統合 未実装
+- [ ] 対話ログイン/設定ファイルフォールバック 未実装（設計の優先順序どおりの完全実装は未着手）
+- [ ] フォールバックプロバイダ切替/サーキットブレーカ 未実装
+- [x] 優雅な劣化（continue_on_error で継続・メタ付与）実装済み
+- [x] CLIコマンド: Execute/Pipeline/list-providers/check-auth のパーサ実装済み（実行連携は未）
+- [ ] CLIコマンド: Parallel/Interactive 未実装
+- [ ] 設定ファイル（TOML）読み込み・パイプライン定義 未実装
+- [ ] セキュリティ（セッション暗号化/自動更新）未実装
+
+参考ファイル: `src/cli/mod.rs`, `src/pipeline/mod.rs`, `src/providers/mod.rs`, `src/providers/claude.rs`, `src/auth/mod.rs`, `src/main.rs`
+
 ## 1. Overview
 
 ### 1.1 Background
